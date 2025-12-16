@@ -20,9 +20,11 @@ jobs:
           cache: 'npm'
 
       - name: 📦 Install dependencies
+        working-directory: backend
         run: npm ci 
 
       - name: 🧪 Build (if exists)
+        working-directory: backend
         run: |
           if jq -e '.scripts.build' package.json > /dev/null; then
             npm run build
@@ -32,19 +34,31 @@ jobs:
 
       - name: 🚀 Deploy with PM2
         shell: bash
+        working-directory: backend
         run: |
           set -e
 
-          # Ensure PM2 present
+          # Get Node.js and npm paths
+          NODE_BIN_DIR="$(dirname "$(which node)")"
+          NPM_BIN_DIR="$(dirname "$(which npm)")"
+          export PATH="$PATH:$NODE_BIN_DIR:$NPM_BIN_DIR"
+
+          # Ensure PM2 present (use npm without sudo, or use full path with sudo)
           if ! command -v pm2 >/dev/null 2>&1; then
-            sudo npm i -g pm2
+            # Try without sudo first
+            npm i -g pm2 || sudo env PATH="$PATH" "$(which npm)" i -g pm2
           fi
 
           # Stop if running (do not fail if not found)
-          pm2 stop backend || true
+          pm2 stop unified-backend || true
+          pm2 delete unified-backend || true
 
-          # Start (or reload if ecosystem later)
-          pm2 start src/server.js --name backend
+          # Start using ecosystem.config.js if exists, otherwise start server.js
+          if [ -f "ecosystem.config.js" ]; then
+            pm2 start ecosystem.config.js
+          else
+            pm2 start server.js --name unified-backend
+          fi
 
           # Save current process list (non-fatal if unchanged)
           pm2 save || true
@@ -52,8 +66,6 @@ jobs:
           # --- FIRST-RUN ONLY (make pm2 boot on reboot) ---
           # Try to detect existing systemd unit to avoid failing every run
           if ! systemctl status pm2-ubuntu >/dev/null 2>&1; then
-            # Build a PATH that includes the Actions Node toolchain
-            NODE_BIN_DIR="$(dirname "$(which node)")"
             # Use sudo + PATH as pm2 suggests; don't fail the job if it prints guidance
             sudo env PATH="$PATH:$NODE_BIN_DIR" pm2 startup systemd -u ubuntu --hp /home/ubuntu || true
             # Enable service if just created
