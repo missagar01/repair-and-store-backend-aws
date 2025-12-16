@@ -1,76 +1,29 @@
-name: 🚀 Node.js CI & Deploy to EC2
+name: Deploy Backend
 
 on:
   push:
-    branches: [ "master" ] 
-  workflow_dispatch:
+    branches:
+      - master
 
 jobs:
   deploy:
     runs-on: self-hosted
 
     steps:
-      - name: 📥 Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: 🟢 Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-
-      - name: 📦 Install dependencies
-        working-directory: backend
-        run: npm ci 
-
-      - name: 🧪 Build (if exists)
-        working-directory: backend
+      - name: Copy files to app directory
         run: |
-          if jq -e '.scripts.build' package.json > /dev/null; then
-            npm run build
-          else
-            echo "No build script. Skipping."
-          fi
+          rsync -av --delete ./ /home/ubuntu/app/
 
-      - name: 🚀 Deploy with PM2
-        shell: bash
-        working-directory: backend
+      - name: Install dependencies
         run: |
-          set -e
+          cd /home/ubuntu/app
+          npm install
 
-          # Get Node.js and npm paths
-          NODE_BIN_DIR="$(dirname "$(which node)")"
-          NPM_BIN_DIR="$(dirname "$(which npm)")"
-          export PATH="$PATH:$NODE_BIN_DIR:$NPM_BIN_DIR"
-
-          # Ensure PM2 present (use npm without sudo, or use full path with sudo)
-          if ! command -v pm2 >/dev/null 2>&1; then
-            # Try without sudo first
-            npm i -g pm2 || sudo env PATH="$PATH" "$(which npm)" i -g pm2
-          fi
-
-          # Stop if running (do not fail if not found)
-          pm2 stop unified-backend || true
-          pm2 delete unified-backend || true
-
-          # Start using ecosystem.config.js if exists, otherwise start server.js
-          if [ -f "ecosystem.config.js" ]; then
-            pm2 start ecosystem.config.js
-          else
-            pm2 start server.js --name unified-backend
-          fi
-
-          # Save current process list (non-fatal if unchanged)
-          pm2 save || true
-
-          # --- FIRST-RUN ONLY (make pm2 boot on reboot) ---
-          # Try to detect existing systemd unit to avoid failing every run
-          if ! systemctl status pm2-ubuntu >/dev/null 2>&1; then
-            # Use sudo + PATH as pm2 suggests; don't fail the job if it prints guidance
-            sudo env PATH="$PATH:$NODE_BIN_DIR" pm2 startup systemd -u ubuntu --hp /home/ubuntu || true
-            # Enable service if just created
-            sudo systemctl enable pm2-ubuntu || true
-          fi
-
-          # Show status for debugging
-          pm2 status
+      - name: PM2 restart
+        run: |
+          cd /home/ubuntu/app
+          pm2 start ecosystem.config.js --env production || pm2 reload backend
+          pm2 save
