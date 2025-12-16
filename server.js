@@ -16,7 +16,36 @@ const __dirname = dirname(__filename);
 const app = express();
 
 // Middlewares
-app.use(cors());
+// CORS configuration - allow requests from frontend domain
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    // List of allowed origins
+    const allowedOrigins = [
+      'https://store-repair.sagartmt.com',
+      'http://store-repair.sagartmt.com',
+      'https://www.store-repair.sagartmt.com',
+      'http://www.store-repair.sagartmt.com',
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:5173'
+    ];
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -80,9 +109,10 @@ async function startServer() {
 
     // PostgreSQL connection will be initialized on first use via config files
 
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Unified Backend Server running on port ${PORT}`);
-      console.log(`📡 API available at http://localhost:${PORT}`);
+      console.log(`📡 API available at http://0.0.0.0:${PORT}`);
+      console.log(`🌐 Server listening on all network interfaces`);
       console.log(`📘 Swagger documentation is disabled for this deployment`);
     });
   } catch (err) {
