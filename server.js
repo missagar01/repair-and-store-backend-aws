@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { initPool } from "./src/config/db.js";
+import { connectRedis } from "./src/config/redisClient.js";
+import redisClient from "./src/config/redisClient.js";
 import routes from "./src/routes/index.js";
 import { fileURLToPath } from "url";
 import path from "path";
@@ -82,6 +84,22 @@ async function startServer() {
       console.log("✅ Oracle pool initialized");
     } else {
       console.log("ℹ️ Oracle not configured, skipping Oracle pool initialization");
+    }
+
+    // Initialize Redis connection (non-blocking, graceful degradation)
+    if (process.env.REDIS_HOST || process.env.REDIS_URL) {
+      // Try to connect, but don't wait or block
+      connectRedis().catch(() => {
+        // Silent - error handler in redisClient will log once
+      });
+      // Give it a moment, but don't wait
+      setTimeout(() => {
+        if (redisClient.isOpen) {
+          console.log("✅ Redis connection active");
+        }
+      }, 1000);
+    } else {
+      console.log("ℹ️ Redis not configured, skipping Redis initialization");
     }
 
     // PostgreSQL connection will be initialized on first use via config files

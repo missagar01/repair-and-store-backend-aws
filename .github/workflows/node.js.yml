@@ -10,35 +10,43 @@ jobs:
     runs-on: self-hosted
 
     steps:
+      # 1️⃣ Checkout code
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 2️⃣ Copy backend files (DO NOT delete .env)
       - name: Copy files to app directory
         run: |
-          # Create app directory if it doesn't exist
+          echo "📁 Syncing backend files..."
           mkdir -p /home/ubuntu/app
-          # Copy backend files to app directory
-          rsync -av --delete ./backend/ /home/ubuntu/app/
-          # Also copy root level files if any
-          if [ -f "./package.json" ]; then
-            cp ./package.json /home/ubuntu/app/ 2>/dev/null || true
-          fi
 
+          rsync -av --delete \
+            --exclude='.env' \
+            --exclude='node_modules' \
+            --exclude='.git' \
+            ./backend/ /home/ubuntu/app/
+
+      # 3️⃣ Install dependencies
       - name: Install dependencies
         run: |
+          echo "📦 Installing dependencies..."
           cd /home/ubuntu/app
-          # Remove old node_modules if exists
           rm -rf node_modules package-lock.json
-          # Install dependencies
-          npm install
+          npm install --production
 
-      - name: PM2 restart
+      # 4️⃣ PM2 Restart (safe)
+      - name: Restart PM2 process
         run: |
+          echo "🚀 Restarting backend with PM2..."
           cd /home/ubuntu/app
-          # Stop and delete existing process
+
           pm2 stop unified-backend || true
           pm2 delete unified-backend || true
-          # Start with ecosystem.config.js
+
           pm2 start ecosystem.config.js --env production
           pm2 save
+
+      # 5️⃣ PM2 Status (for logs)
+      - name: PM2 status
+        run: |
           pm2 status

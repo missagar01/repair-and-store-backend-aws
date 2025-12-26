@@ -2,9 +2,6 @@
 import oracledb from "oracledb";
 import os from "os";
 
-/**
- * Global Oracle driver settings
- */
 try {
   oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
   oracledb.fetchArraySize = 1000;
@@ -46,6 +43,8 @@ export function initOracleClient() {
 }
 
 export default oracledb;
+
+
 
 
 

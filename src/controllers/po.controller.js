@@ -6,6 +6,7 @@ import {
 } from "../utils/excel.helper.js";
 
 const poBaseColumns = [
+  { header: "Indent No.", key: "INDENT_NO", width: 20 },
   { header: "PO No.", key: "VRNO", width: 16 },
   { header: "S.No", key: "S_NO", width: 8 },
   { header: "Planned Time Stamp", key: "PLANNED_TIMESTAMP", width: 22 },

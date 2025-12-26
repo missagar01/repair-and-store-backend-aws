@@ -38,7 +38,7 @@ export async function createStoreIndent(req, res) {
     const data = await storeIndentService.create(req.body);
 
     // data change hone ke baad cache clear
-    storeIndentService.invalidateIndentCaches();
+    await storeIndentService.invalidateIndentCaches();
 
     return res.json({ success: true, ...data });
   } catch (err) {
@@ -55,7 +55,7 @@ export async function approveStoreIndent(req, res) {
     await storeIndentService.approve(req.body);
 
     // approve ke baad cache clear
-    storeIndentService.invalidateIndentCaches();
+    await storeIndentService.invalidateIndentCaches();
 
     return res.json({
       success: true,
