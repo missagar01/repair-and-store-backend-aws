@@ -7,6 +7,7 @@ import {
 
 const poBaseColumns = [
   { header: "Indent No.", key: "INDENT_NO", width: 20 },
+  { header: "Indenter", key: "INDENTER", width: 28 },
   { header: "PO No.", key: "VRNO", width: 16 },
   { header: "S.No", key: "S_NO", width: 8 },
   { header: "Planned Time Stamp", key: "PLANNED_TIMESTAMP", width: 22 },
@@ -43,11 +44,18 @@ function annotatePoRows(rows = []) {
       (Number.isFinite(orderQty) && Number.isFinite(executeQty)
         ? orderQty - executeQty
         : undefined);
+    const indenter =
+      row.INDENTER ??
+      row.indenter ??
+      row.indent_remark ??
+      row.INDENTER ??
+      "";
 
     return {
       ...row,
       S_NO: index + 1,
       BALANCE_QTY: balance,
+      INDENTER: indenter,
     };
   });
 }
