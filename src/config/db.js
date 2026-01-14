@@ -48,6 +48,8 @@ export async function initPool() {
   return poolPromise;
 }
 
+
+
 export async function getConnection() {
   if (!pool) {
     await initPool();
