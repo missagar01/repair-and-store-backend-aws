@@ -10,35 +10,24 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Copy files to app directory
+      - name: Sync code to /home/ubuntu/app
         run: |
-          # Create app directory if it doesn't exist
           mkdir -p /home/ubuntu/app
-          # Copy backend files to app directory
-          rsync -av --delete ./backend/ /home/ubuntu/app/
-          # Also copy root level files if any
-          if [ -f "./package.json" ]; then
-            cp ./package.json /home/ubuntu/app/ 2>/dev/null || true
-          fi
+          rsync -av --delete \
+            --exclude='.env' \
+            --exclude='node_modules' \
+            --exclude='.git' \
+            ./ /home/ubuntu/app/
 
       - name: Install dependencies
         run: |
           cd /home/ubuntu/app
-          # Remove old node_modules if exists
-          rm -rf node_modules package-lock.json
-          # Install dependencies
           npm install
 
-      - name: PM2 restart
+      - name: Restart PM2
         run: |
-          cd /home/ubuntu/app
-          # Stop and delete existing process
-          pm2 stop unified-backend || true
           pm2 delete unified-backend || true
-          # Start with ecosystem.config.js
-          pm2 start ecosystem.config.js --env production
+          pm2 start /home/ubuntu/app/ecosystem.config.js --env production
           pm2 save
-          pm2 status
